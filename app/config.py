@@ -11,8 +11,10 @@ ENV = os.getenv("ENV", "dev")
 MONGODB_URI = None
 DB_NAME = None
 JWT_SECRET = None
+print('hi there')
 
 if ENV == "prod":
+    print("🔐 Using production environment variables from Azure Key Vault")
 
     VAULT_URL = os.getenv("VAULT_URL") 
 
@@ -28,6 +30,8 @@ if ENV == "prod":
     API_BASE_URL = client.get_secret("APIBASEURL").value
     ACS_CONNECTION_STRING = client.get_secret("ACSCONNECTIONSTRING").value
     SENDER_ADDRESS = client.get_secret("SENDERADDRESS").value
+
+    print(VAULT_URL, MONGODB_URI, DB_NAME, JWT_SECRET, API_BASE_URL, ACS_CONNECTION_STRING, SENDER_ADDRESS)
    
 
 
@@ -37,6 +41,7 @@ if ENV == "prod":
     AZURE_CONTAINER_NAME = client.get_secret("AZURECONTAINERNAME").value
     AZURE_STORAGE_ACCOUNT = client.get_secret("AZURESTORAGEACCOUNT").value
     AZURE_STORAGE_KEY = client.get_secret("AZURESTORAGEKEY").value
+    print(AZURE_STORAGE_CONNECTION_STRING, AZURE_CONTAINER_NAME, AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY)
     blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
     container_client = blob_service_client.get_container_client(AZURE_CONTAINER_NAME)
     try:
