@@ -10,7 +10,7 @@ logger.setLevel(logging.INFO)
 
 load_dotenv()
 
-ENV = os.getenv("ENV", "dev")  
+ENV = "prod"
 
 MONGODB_URI = None
 DB_NAME = None
