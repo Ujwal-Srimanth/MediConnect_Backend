@@ -27,6 +27,7 @@ if ENV == "prod":
     JWT_SECRET = client.get_secret("JWTSECRET").value
     API_BASE_URL = client.get_secret("APIBASEURL").value
     ACS_CONNECTION_STRING = client.get_secret("ACSCONNECTIONSTRING").value
+    SENDER_ADDRESS = client.get_secret("SENDERADDRESS").value
    
 
 
