@@ -113,10 +113,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"detail": errors},  # nice readable list
     )
 
+origins = [
+    "https://orange-hill-0603d7a00.1.azurestaticapps.net",  # frontend
+    "http://localhost:3000",  # optional if you still want to test locally
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=origins, 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
