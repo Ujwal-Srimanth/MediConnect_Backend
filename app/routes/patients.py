@@ -190,7 +190,7 @@ async def patient_analytics(request: AnalyticsRequest):
                 "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
                 headers={
                     "Content-Type": "application/json",
-                    "X-goog-api-key": os.environ["OPEN_AI_API_KEY"]  # use same env name
+                    "X-goog-api-key": OPEN_AI_API_KEY  
                 },
                 json={
                     "contents": [
@@ -203,6 +203,7 @@ async def patient_analytics(request: AnalyticsRequest):
                 },
                 timeout=30.0
             )
+            print(response)
 
             if response.status_code != 200:
                 raise HTTPException(status_code=response.status_code, detail=response.text)
