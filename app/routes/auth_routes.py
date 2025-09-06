@@ -68,7 +68,7 @@ async def login(user: UserLogin):
     if not existing_user or not check_password(user.password, existing_user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_token(str(existing_user["_id"]), existing_user["role"])
-    return {"token": token,"email":existing_user["email"],"role":existing_user["role"],"is_profile_filled":existing_user["is_profile_filled"],"id":str(existing_user["_id"])}
+    return {"token": token,"email":existing_user["email"],"mobile":existing_user["mobile"],"role":existing_user["role"],"is_profile_filled":existing_user["is_profile_filled"],"id":str(existing_user["_id"])}
 
 @router.post("/profile-complete")
 async def complete_profile(current_user: dict = Depends(get_current_user)):

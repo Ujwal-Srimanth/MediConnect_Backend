@@ -80,8 +80,24 @@ async def send_daily_reminders():
                 "Please be on time. Thank you!"
             )
 
+
+            body_html = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <p>Hello,</p>
+                    <p>This is a reminder for your appointment.</p>
+                    <ul>
+                    <li><b>👨‍⚕️ Doctor:</b> {doctor_name} ({doctor_hospital})</li>
+                    <li><b>🗓 Date/Time:</b> {appt['start_datetime']} - {appt['end_datetime']}</li>
+                    <li><b>Purpose:</b> {appt['purpose']}</li>
+                    </ul>
+                    <p>Please be on time. Thank you!</p>
+                </body>
+                </html>
+            """
+
             try:
-                await send_email(patient_email, subject, body_text)
+                await send_email(patient_email, subject, body_text,body_html)
                 print(f"✅ Reminder email sent to {patient_email}")
             except Exception as e:
                 print(f"❌ Failed to send reminder email to {patient_email}: {e}")

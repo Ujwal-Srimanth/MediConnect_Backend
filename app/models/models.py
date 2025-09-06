@@ -32,3 +32,7 @@ class PatientOut(BaseModel):
     emergency_contact: Optional[EmergencyContact] = None
     insurance: Optional[InsuranceInfo] = None
     medical_records: List[FileInfo] = []
+
+class AnalyticsRequest(BaseModel):
+    prompt: str
+    

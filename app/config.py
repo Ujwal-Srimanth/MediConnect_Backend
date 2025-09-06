@@ -11,6 +11,7 @@ ENV = "prod"
 if ENV == "prod":
 
     VAULT_URL = os.getenv("VAULT_URL") 
+    
 
     if not VAULT_URL:
         raise Exception("❌ VAULT_URL not set for production")
@@ -24,6 +25,7 @@ if ENV == "prod":
     API_BASE_URL = client.get_secret("APIBASEURL").value
     ACS_CONNECTION_STRING = client.get_secret("ACSCONNECTIONSTRING").value
     SENDER_ADDRESS = client.get_secret("SENDERADDRESS").value
+    OPEN_AI_API_KEY = client.get_secret("OPENAIAPIKEY").value
    
 
 

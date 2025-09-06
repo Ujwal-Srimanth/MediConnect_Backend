@@ -2,7 +2,7 @@ from azure.communication.email.aio import EmailClient
 import os
 from app.config import ACS_CONNECTION_STRING, SENDER_ADDRESS
 
-async def send_email(recipient_email: str, subject: str, body: str):
+async def send_email(recipient_email: str, subject: str, body: str,body_html: str = None):
 
     print(recipient_email)
     if not ACS_CONNECTION_STRING:
@@ -18,7 +18,7 @@ async def send_email(recipient_email: str, subject: str, body: str):
         "content": {
             "subject": subject,
             "plainText": body,
-            "html": f"<p>{body}</p>"
+            "html": body_html
         }
     }
     try:

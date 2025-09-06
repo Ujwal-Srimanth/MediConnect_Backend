@@ -405,6 +405,87 @@ class SlotService:
             )
 
         return appointments
+    
+    @classmethod
+    async def get_all_appointments(cls, doctor_id: str) -> List[Dict[str, Any]]:
+        """
+        Fetch **all booked appointments** for a doctor (past + present + future).
+        """
+        db = get_database()
+        appointments_collection = db.appointments
+        doctors_collection = db.doctors
+        users_collection = db.users
+
+        # ✅ Validate doctor_id before casting
+        if not str(doctor_id).startswith("DOC"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid doctor_id: {doctor_id}",
+            )
+
+        doctor_oid = doctor_id
+
+        # Check doctor exists
+        if not await doctors_collection.find_one({"_id": doctor_oid}):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Doctor not found",
+            )
+
+        # ✅ Fetch ALL booked appointments (no 24h filter)
+        cursor = await appointments_collection.find(
+            {
+                "doctor_id": doctor_oid,
+                "is_booked": True,
+            },
+            {
+                "_id": 1,
+                "doctor_id": 1,
+                "patient_id": 1,
+                "date": 1,
+                "day": 1,
+                "start_datetime": 1,
+                "end_datetime": 1,
+                "status": 1,
+                "purpose": 1,
+            },
+        ).to_list(length=None)
+
+        # Sort by start_datetime (oldest → newest)
+        cursor.sort(key=lambda x: x.get("start_datetime", datetime.min))
+
+        # Convert ObjectId → str, datetime → isoformat
+        appointments = []
+        for doc in cursor:
+            patient = await users_collection.find_one(
+                {"_id": doc["patient_id"]}, {"email": 1}
+            )
+            patient_email = patient["email"] if patient else None
+            appointments.append(
+                {
+                    "appointment_id": str(doc["_id"]),
+                    "doctor_id": str(doc["doctor_id"]),
+                    "patient_id": str(doc["patient_id"]),
+                    "patient_email": patient_email,
+                    "date": doc["date"],
+                    "day": doc["day"],
+                    "start_datetime": (
+                        doc["start_datetime"].isoformat()
+                        if isinstance(doc["start_datetime"], datetime)
+                        else str(doc["start_datetime"])
+                    ),
+                    "end_datetime": (
+                        doc["end_datetime"].isoformat()
+                        if isinstance(doc["end_datetime"], datetime)
+                        else str(doc["end_datetime"])
+                    ),
+                    "status": doc.get("status"),
+                    "purpose": doc.get("purpose"),
+                }
+            )
+
+        return appointments
+
 
     @classmethod
     async def update_appointment_status(
@@ -467,7 +548,30 @@ class SlotService:
                     "We look forward to seeing you!"
                     "Please be present in the hospital 10 minutes before your scheduled time.\n\n"
                 )
-                await send_email(patient["email"], subject, body_text)
+
+                body_html = f"""
+<html>
+  <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+    <p>Hello,</p>
+
+    <p>Your appointment with <b>Doctor {doctor_id}</b> has been 
+    <span style="color: green; font-weight: bold;">APPROVED ✅</span>.</p>
+
+    <p>
+      🗓 <b>Date/Time:</b> {start_time} - {end_time}<br>
+      🎯 <b>Purpose:</b> {purpose}
+    </p>
+
+    <p>We look forward to seeing you!</p>
+
+    <p><b>Please be present in the hospital 10 minutes before your scheduled time.</b></p>
+
+    <p style="margin-top:20px;">Regards,<br><b>Mediconnect Team</b></p>
+  </body>
+</html>
+"""
+
+                await send_email(patient["email"], subject, body_text,body_html)
             except Exception as e:
                 import logging
                 logging.error(f"Failed to send approval email: {e}")
@@ -489,7 +593,28 @@ class SlotService:
                     f"Purpose: {purpose}\n\n"
                     "Please try booking another slot."
                 )
-                await send_email(patient["email"], subject, body_text)
+
+                body_html = f"""
+<html>
+  <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+    <p>Hello,</p>
+
+    <p>Unfortunately, your appointment with <b>Doctor {doctor_id}</b> on 
+    <b>{start_time} - {end_time}</b> has been 
+    <span style="color: red; font-weight: bold;">REJECTED ❌</span> due to unexpected emergencies.</p>
+
+    <p>
+      🎯 <b>Purpose:</b> {purpose}
+    </p>
+
+    <p>Please try booking another slot at your convenience.</p>
+
+    <p style="margin-top:20px;">Regards,<br><b>Mediconnect Team</b></p>
+  </body>
+</html>
+"""
+
+                await send_email(patient["email"], subject, body_text,body_html)
             except Exception as e:
                 import logging
                 logging.error(f"Failed to send rejection email: {e}")

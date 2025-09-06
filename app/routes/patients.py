@@ -10,6 +10,10 @@ from app.utils.utils import to_iso_date, normalize_files
 from app.config import UPLOAD_DIR
 from ..utils.auth_utils import get_current_user
 from app.database import get_database
+from ..models.models import AnalyticsRequest
+import httpx
+from ..config import OPEN_AI_API_KEY
+
 
 router = APIRouter()
 
@@ -170,3 +174,44 @@ async def create_patient(
     except Exception as e:
         logging.exception("Failed to save patient")
         raise HTTPException(status_code=500, detail=f"Failed to save patient: {e}")
+    
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+import os
+import httpx
+
+
+@router.post("/api/patient-analytics")
+async def patient_analytics(request: AnalyticsRequest):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+                headers={
+                    "Content-Type": "application/json",
+                    "X-goog-api-key": os.environ["OPEN_AI_API_KEY"]  # use same env name
+                },
+                json={
+                    "contents": [
+                        {
+                            "parts": [
+                                {"text": request.prompt}
+                            ]
+                        }
+                    ]
+                },
+                timeout=30.0
+            )
+
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=response.text)
+
+            data = response.json()
+            # Extract text from Gemini response
+            ai_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            return {"response": ai_text}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

@@ -107,7 +107,29 @@ async def cancel_appointment(
             f"Purpose: {appointment["purpose"]}\n\n"
             "Please free feel to book another appointment if needed.\n\n"
             )
-            await send_email(patient["email"], subject, body_text)
+
+            body_html = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+                    <p>Hello,</p>
+
+                    <p>Your appointment with <b>Doctor {appointment["doctor_id"]}</b> has been <span style="color: red; font-weight: bold;">Cancelled</span>.</p>
+
+                    <p>
+                    🗓 <b>Date/Time:</b> {appointment["start_datetime"]} - {appointment["end_datetime"]}<br>
+                    🎯 <b>Purpose:</b> {appointment["purpose"]}
+                    </p>
+
+                    <p>
+                    Please feel free to book another appointment if needed.
+                    </p>
+
+                    <p style="margin-top:20px;">Thank you,<br><b>Mediconnect Team</b></p>
+                </body>
+                </html>
+                """
+
+            await send_email(patient["email"], subject, body_text,body_html)
         except Exception as e:
             import logging
             logging.error(f"Failed to send confirmation email: {e}")
@@ -159,8 +181,29 @@ async def book_doctor_appointment(doctor_id: str, body: SlotBookingRequest,curre
             "Thank you for choosing our service!"
         )
 
+        body_html = f"""
+<html>
+  <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+    <p>Hello,</p>
+
+    <p>Your appointment with <b>Doctor {doctor_id}</b> has been 
+    <span style="color: green; font-weight: bold;">Booked</span>.</p>
+
+    <p>
+      🗓 <b>Date/Time:</b> {slot['start_datetime']} - {slot['end_datetime']}<br>
+      🎯 <b>Purpose:</b> {slot['purpose']}
+    </p>
+
+    <p>Thank you for choosing our service!</p>
+
+    <p style="margin-top:20px;">Regards,<br><b>Mediconnect Team</b></p>
+  </body>
+</html>
+"""
+
+
         try:
-            await send_email(patient["email"], subject, body_text)
+            await send_email(patient["email"], subject, body_text,body_html)
         except Exception as e:
             import logging
             logging.error(f"Failed to send confirmation email: {e}")
@@ -169,11 +212,68 @@ async def book_doctor_appointment(doctor_id: str, body: SlotBookingRequest,curre
 
 
 @router.get("/{doctor_id}")
-async def get_next_24h_appointments(doctor_id: str):
+async def get_next_24h_appointments(doctor_id: str,current_user: dict = Depends(get_current_user)):
     """
     Get all appointments for the given doctor in the next 24 hours (IST).
     """
     return await SlotService.get_upcoming_appointments(doctor_id)
+
+
+
+
+
+@router.get("/all/patients/{patient_id}")
+async def get_all_appointments(patient_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Fetch all appointments (past, present, future) for a patient.
+    """
+    try:
+        appointments_collection = db.appointments
+        doctors_collection = db.doctors
+
+        # ✅ Fetch ALL appointments for patient (no datetime filter)
+        appointments_cursor = await appointments_collection.find({
+            "patient_id": ObjectId(patient_id)
+        }).to_list(length=None)
+
+        appointments = []
+        for appointment in appointments_cursor:
+            # Get doctor info
+            doctor = await doctors_collection.find_one({"_id": appointment["doctor_id"]})
+            if not doctor:
+                continue  
+
+            appointments.append({
+                "appointment_id": str(appointment["_id"]),
+                "start_datetime": (
+                    appointment["start_datetime"].isoformat()
+                    if isinstance(appointment["start_datetime"], datetime)
+                    else str(appointment["start_datetime"])
+                ),
+                "end_datetime": (
+                    appointment["end_datetime"].isoformat()
+                    if isinstance(appointment["end_datetime"], datetime)
+                    else str(appointment["end_datetime"])
+                ),
+                "date": appointment.get("date"),
+                "status": appointment.get("status"),
+                "purpose": appointment.get("purpose"),
+                "doctor": {
+                    "doctor_id": str(doctor["_id"]),
+                    "name": doctor.get("name"),
+                    "specialization": doctor.get("specialization"),
+                    "hospital": doctor.get("hospital"),
+                }
+            })
+
+        # Sort by start_datetime (newest first)
+        appointments.sort(key=lambda x: x["start_datetime"], reverse=True)
+
+        return {"appointments": appointments}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # Receptionist use-case
