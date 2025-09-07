@@ -97,7 +97,7 @@ async def create_receptionist(receptionist: Receptionist5, user=Depends(admin_re
     receptionist_data = receptionist.dict(by_alias=True)
     receptionist_data["hospital"] = hospital["name"]
 
-    await db.receptionists.insert_one(receptionist_data)
+    await db.receptionist.insert_one(receptionist_data)
     return receptionist_data
 
 

@@ -13,6 +13,8 @@ from app.database import get_database
 from ..models.models import AnalyticsRequest
 import httpx
 from ..config import OPEN_AI_API_KEY
+import uuid
+from ..utils.email_service import send_email
 
 
 router = APIRouter()
@@ -73,6 +75,86 @@ async def list_patients(email_address: str = Query(None),current_user: dict = De
         }
         patients.append(PatientOut(**resp))
     return patients
+
+from fastapi import HTTPException, UploadFile, Depends
+from typing import List
+from bson import ObjectId
+
+@router.post("/update_medical_record")
+async def upload_appointment_files(
+    appointment_id: str = Form(...),
+    files: list[UploadFile] = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    db = get_database()
+    appointments_collection = db.appointments
+    users_collection = db.users
+    doctors_collection = db.doctors
+    appt = await appointments_collection.find_one({"_id": ObjectId(appointment_id)})
+    if not appt:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    existing_files = appt.get("medical_records", [])
+    for f in files:
+        import re
+        def clean_filename(filename: str) -> str:
+            filename = filename.replace(" ", "_")
+            filename = re.sub(r"[()]", "", filename)
+            return filename
+        safe_filename = clean_filename(f.filename)
+        import uuid
+        unique_name = f"{uuid.uuid4().hex}_{safe_filename}"
+        blob_client = container_client.get_blob_client(unique_name)
+        blob_client.upload_blob(f.file, overwrite=True)
+        file_url = blob_client.url
+        existing_files.append({"filename": safe_filename, "filepath": file_url, "blob_name": unique_name})
+
+    await appointments_collection.update_one(
+        {"_id": ObjectId(appointment_id)},
+        {"$set": {"medical_records": existing_files}}
+    )
+
+    # Fetch patient email
+    patient_id = appt.get("patient_id")
+    patient = await users_collection.find_one({"_id": ObjectId(patient_id)})
+    patient_email = patient.get("email") if patient else None
+
+# Fetch doctor info
+    doctor_id = appt.get("doctor_id")
+    doctor_doc = await db.doctors.find_one({"_id": doctor_id}) if doctor_id else {}
+    doctor_name = doctor_doc.get("name", "Unknown")
+
+    if patient_email and files:
+        subject = "New Medical Records Uploaded by Your Doctor"
+        body_text = (
+        f"Hello,\n\nYour doctor, {doctor_name}, has uploaded new medical records for your appointment.\n"
+        f"🗓 Date/Time: {appt['start_datetime']} - {appt['end_datetime']}\n"
+        "Please check the uploaded files."
+        )
+
+        body_html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>Hello,</p>
+        <p>Your doctor, <b>{doctor_name}</b>, has uploaded new medical records for your appointment.</p>
+        <p><b>Date/Time:</b> {appt['start_datetime']} - {appt['end_datetime']}</p>
+        <p>Please check the uploaded files.</p>
+    </body>
+    </html>
+    """
+
+        try:
+            await send_email(patient_email, subject, body_text, body_html)
+            print(f"✅ Notification email sent to {patient_email}")
+        except Exception as e:
+            print(f"❌ Failed to send notification email to {patient_email}: {e}")
+    else:
+            print(f"⚠️ No email found for patient {patient_id} or no files uploaded")
+
+
+    # Return simple success response
+    return {"success": True}
+
 
 
 @router.post("/", response_model=PatientOut)

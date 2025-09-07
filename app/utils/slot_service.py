@@ -8,6 +8,7 @@ from app.database import get_database
 from ..models.appointment import AppointmentStatus
 from ..models.schedule import Schedule
 from ..utils.email_service import send_email
+from ..utils.utils import normalize_files
 
 
 def serialize_doc(doc: dict) -> dict:
@@ -448,6 +449,7 @@ class SlotService:
                 "end_datetime": 1,
                 "status": 1,
                 "purpose": 1,
+                "medical_records": 1,
             },
         ).to_list(length=None)
 
@@ -481,6 +483,7 @@ class SlotService:
                     ),
                     "status": doc.get("status"),
                     "purpose": doc.get("purpose"),
+                    "medical_records": doc.get("medical_records", []), 
                 }
             )
 

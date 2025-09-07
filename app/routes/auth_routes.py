@@ -70,6 +70,40 @@ async def login(user: UserLogin):
     token = create_token(str(existing_user["_id"]), existing_user["role"])
     return {"token": token,"email":existing_user["email"],"mobile":existing_user["mobile"],"role":existing_user["role"],"is_profile_filled":existing_user["is_profile_filled"],"id":str(existing_user["_id"])}
 
+@router.get("/all/users")
+async def get_all_users():
+    """
+    Fetch list of all users (without password).
+    """
+    try:
+        db = get_database()
+        users_collection = db.users
+
+        users_cursor = await users_collection.find({}, {
+            "_id": 1,
+            "email": 1,
+            "mobile": 1,
+            "role": 1,
+            "ID": 1,
+            "is_profile_filled": 1
+        }).to_list(length=None)
+
+        users = []
+        for user in users_cursor:
+            users.append({
+                "id": str(user["_id"]),
+                "email": user.get("email"),
+                "mobile": user.get("mobile"),
+                "role": user.get("role"),
+                "ID": user.get("ID"),
+                "is_profile_filled": user.get("is_profile_filled", False)
+            })
+
+        return {"users": users}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/profile-complete")
 async def complete_profile(current_user: dict = Depends(get_current_user)):
     await users_collection.update_one(

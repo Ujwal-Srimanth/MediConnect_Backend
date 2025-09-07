@@ -110,7 +110,7 @@ async def startup_event():
     print(scheduler)
     scheduler.add_job(
         send_daily_reminders,
-        CronTrigger(hour=10, minute=33, timezone="Asia/Kolkata")
+        CronTrigger(hour=7, minute=0, timezone="Asia/Kolkata")
     )
     print(scheduler.get_jobs())
     scheduler.start()

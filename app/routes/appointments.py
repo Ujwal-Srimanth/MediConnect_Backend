@@ -6,6 +6,7 @@ from app.database import get_database
 from ..utils.email_service import send_email
 from datetime import datetime
 from bson import ObjectId
+from ..utils.utils import normalize_files
 
 
 router = APIRouter()
@@ -218,6 +219,72 @@ async def get_next_24h_appointments(doctor_id: str,current_user: dict = Depends(
     """
     return await SlotService.get_upcoming_appointments(doctor_id)
 
+@router.get("/all/{doctor_id}")
+async def get_all_appointments(doctor_id: str,current_user: dict = Depends(get_current_user)):
+    """
+    Get all appointments for the given doctor in the next 24 hours (IST).
+    """
+    return await SlotService.get_all_appointments(doctor_id)
+
+
+router = APIRouter()
+
+@router.get("/all")
+async def get_all_appointments(current_user: dict = Depends(get_current_user)):
+    """
+    Fetch all appointments in the system (no filtering).
+    """
+    try:
+        appointments_collection = db.appointments
+        doctors_collection = db.doctors
+        patients_collection = db.patients
+
+        # ✅ Fetch ALL appointments
+        appointments_cursor = await appointments_collection.find({}).to_list(length=None)
+
+        appointments = []
+        for appointment in appointments_cursor:
+            # Get doctor info
+            doctor = await doctors_collection.find_one({"_id": appointment["doctor_id"]})
+            # Get patient info
+            patient = await patients_collection.find_one({"_id": appointment["patient_id"]})
+
+            appointments.append({
+                "appointment_id": str(appointment["_id"]),
+                "start_datetime": (
+                    appointment["start_datetime"].isoformat()
+                    if isinstance(appointment["start_datetime"], datetime)
+                    else str(appointment["start_datetime"])
+                ),
+                "end_datetime": (
+                    appointment["end_datetime"].isoformat()
+                    if isinstance(appointment["end_datetime"], datetime)
+                    else str(appointment["end_datetime"])
+                ),
+                "date": appointment.get("date"),
+                "status": appointment.get("status"),
+                "purpose": appointment.get("purpose"),
+                "doctor": {
+                    "doctor_id": str(doctor["_id"]) if doctor else None,
+                    "name": doctor.get("name") if doctor else None,
+                    "specialization": doctor.get("specialization") if doctor else None,
+                    "hospital": doctor.get("hospital") if doctor else None,
+                },
+                "patient": {
+                    "patient_id": str(patient["_id"]) if patient else None,
+                    "name": patient.get("name") if patient else None,
+                    "email": patient.get("email") if patient else None,
+                },
+                "medical_records": normalize_files(appointment.get("medical_records", []))
+            })
+
+        # Sort by start_datetime (latest first)
+        appointments.sort(key=lambda x: x["start_datetime"], reverse=True)
+
+        return {"appointments": appointments}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 
@@ -263,7 +330,8 @@ async def get_all_appointments(patient_id: str, current_user: dict = Depends(get
                     "name": doctor.get("name"),
                     "specialization": doctor.get("specialization"),
                     "hospital": doctor.get("hospital"),
-                }
+                },
+                "medical_records": normalize_files(appointment.get("medical_records", []))
             })
 
         # Sort by start_datetime (newest first)
