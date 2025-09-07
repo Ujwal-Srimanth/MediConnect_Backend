@@ -227,17 +227,17 @@ async def get_all_appointments(doctor_id: str,current_user: dict = Depends(get_c
     return await SlotService.get_all_appointments(doctor_id)
 
 
-router = APIRouter()
-
-@router.get("/all")
+@router.get("/ball/appointments")
 async def get_all_appointments(current_user: dict = Depends(get_current_user)):
     """
     Fetch all appointments in the system (no filtering).
     """
     try:
+        print("hi")
         appointments_collection = db.appointments
         doctors_collection = db.doctors
         patients_collection = db.patients
+        print("hi1")
 
         # ✅ Fetch ALL appointments
         appointments_cursor = await appointments_collection.find({}).to_list(length=None)
