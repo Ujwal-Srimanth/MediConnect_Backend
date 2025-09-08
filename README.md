@@ -44,6 +44,8 @@ backend/
 │ ├── utils/ # JWT, helpers
 │── requirements.txt
 
+yaml
+Copy code
 
 ---
 
@@ -83,3 +85,4 @@ ReDoc → http://localhost:8000/redoc
 📧 Notifications
 Appointment confirmations, reminders, and cancellations are handled through Azure Communication Services (ACS).
 
+```
