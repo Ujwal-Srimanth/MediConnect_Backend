@@ -1,8 +1,3 @@
----
-
-## 🟧 **Backend README.md**
-
-```markdown
 # MediConnect Backend
 
 The backend of **MediConnect** — a secure and scalable healthcare management system.  
@@ -35,35 +30,31 @@ Built with **FastAPI**, deployed on **Azure App Service**, and powered by **Cosm
 ---
 
 ## 📂 Project Structure
+```bash
 backend/
 │── app/
-│ ├── main.py # Entry point
-│ ├── models/ # Database models
-│ ├── routes/ # API routes
-│ ├── services/ # Business logic
-│ ├── utils/ # JWT, helpers
+│   ├── main.py          # Entry point
+│   ├── models/          # Database models
+│   ├── routes/          # API routes
+│   ├── services/        # Business logic
+│   ├── utils/           # JWT, helpers
 │── requirements.txt
+⚡ Deployment
+Deployed on Azure App Service (Web App).
 
-yaml
+Connected to Azure CosmosDB (Mongo API).
+
+Secrets managed in Azure Key Vault.
+
+▶️ Getting Started
+Prerequisites
+Python 3.9+
+
+FastAPI, Uvicorn
+
+Installation
+bash
 Copy code
-
----
-
-## ⚡ Deployment
-- Deployed on **Azure App Service (Web App)**.
-- Connected to **Azure CosmosDB (Mongo API)**.
-- Secrets managed in **Azure Key Vault**.
-
----
-
-## ▶️ Getting Started
-
-### Prerequisites
-- Python 3.9+
-- FastAPI, Uvicorn
-
-### Installation
-```bash
 git clone https://github.com/<your-username>/mediconnect-backend.git
 cd mediconnect-backend
 pip install -r requirements.txt
@@ -84,5 +75,3 @@ ReDoc → http://localhost:8000/redoc
 
 📧 Notifications
 Appointment confirmations, reminders, and cancellations are handled through Azure Communication Services (ACS).
-
-```
